@@ -1,5 +1,5 @@
 -- Headless tests for Surprise Me! raid conversion.
--- Mocks the WoW 1.12 API and loads SurpriseMe.lua.
+-- Mocks the WoW 1.12 API and loads SurpriseMe-1.12.lua.
 
 local testsPassed = 0
 local testsFailed = 0
@@ -161,7 +161,7 @@ arg2 = nil
 event = nil
 LFT = nil
 
-dofile("SurpriseMe.lua")
+dofile("SurpriseMe-1.12.lua")
 
 SurpriseMeDB = {
     enabled = true,
@@ -315,6 +315,20 @@ assertEqual(convertCalls, 0, "keyword whisper in small party does not convert")
 
 print("\nCheckRaidConversion removed")
 assertTrue(SurpriseMe.CheckRaidConversion == nil, "legacy CheckRaidConversion helper is gone")
+
+print("\nGit/folder addon name")
+SurpriseMeDB = nil
+fireEvent("ADDON_LOADED", "SurpriseMe")
+assertTrue(SurpriseMeDB == nil, "legacy SurpriseMe folder name does not initialize")
+fireEvent("ADDON_LOADED", "SurpriseMe-1.12")
+assertTrue(SurpriseMeDB ~= nil, "SurpriseMe-1.12 addon name initializes saved vars")
+
+local toc = io.open("SurpriseMe-1.12.toc", "r")
+assertTrue(toc ~= nil, "SurpriseMe-1.12.toc exists for git clone folder name")
+local tocText = toc and toc:read("*a") or ""
+if toc then toc:close() end
+assertTrue(string.find(tocText, "SurpriseMe-1.12.lua", 1, true) ~= nil, "toc loads SurpriseMe-1.12.lua")
+assertTrue(string.find(tocText, "SurpriseMe-1.12-GUI.lua", 1, true) ~= nil, "toc loads SurpriseMe-1.12-GUI.lua")
 
 print("\n==================================")
 print(string.format("Passed: %d  Failed: %d", testsPassed, testsFailed))

@@ -1,6 +1,6 @@
-# Surprise Me! - Auto-Invite Addon for TurtleWoW
+# Surprise Me! 1.12 - Auto-Invite Addon for TurtleWoW
 
-[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](https://github.com/yourusername/SurpriseMe)
+[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](https://github.com/cinos03/SurpriseMe-1.12)
 [![WoW Version](https://img.shields.io/badge/WoW-1.12-orange.svg)](https://turtle-wow.org/)
 
 **Surprise Me!** is a World of Warcraft 1.12 addon designed for TurtleWoW that automatically invites players to your group when they whisper specific keywords. Perfect for raid leaders, dungeon groups, or anyone who frequently forms groups!
@@ -18,10 +18,11 @@
 
 ## 📦 Installation
 
-1. Download the `SurpriseMe` folder
-2. Extract it to your `Interface\AddOns\` directory
-3. The path should look like: `Interface\AddOns\SurpriseMe\`
-4. Restart World of Warcraft or reload your UI (`/reload`)
+1. Clone or download this repo. The addon folder **must** be named `SurpriseMe-1.12` (GitHub ZIP extracts as `SurpriseMe-1.12-main` — rename it).
+2. Place that folder in your `Interface\AddOns\` directory
+3. The path should look like: `Interface\AddOns\SurpriseMe-1.12\`
+4. Confirm these files are inside that folder: `SurpriseMe-1.12.toc`, `SurpriseMe-1.12.lua`, `SurpriseMe-1.12-GUI.lua`
+5. Restart World of Warcraft or reload your UI (`/reload`)
 
 ## 🚀 Quick Start
 

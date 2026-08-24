@@ -40,7 +40,7 @@ end
 
 -- Handle events
 function SurpriseMe:OnEvent(event)
-    if event == "ADDON_LOADED" and arg1 == "SurpriseMe" then
+    if event == "ADDON_LOADED" and arg1 == "SurpriseMe-1.12" then
         SurpriseMe:OnLoad()
         SurpriseMe:Print("Surprise Me! addon loaded! Type /surpriseme to open settings.")
         

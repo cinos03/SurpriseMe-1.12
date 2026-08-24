@@ -1,9 +1,9 @@
 ## Interface: 11200
-## Title: Surprise Me!
+## Title: Surprise Me! 1.12
 ## Notes: Automatically invites players who whisper keywords. Perfect for raid invites!
 ## Author: YourName
 ## Version: 1.1
 ## SavedVariables: SurpriseMeDB
 
-SurpriseMe.lua
-SurpriseMeGUI.lua
+SurpriseMe-1.12.lua
+SurpriseMe-1.12-GUI.lua
