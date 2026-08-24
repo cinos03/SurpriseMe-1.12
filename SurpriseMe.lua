@@ -2,7 +2,9 @@
 -- Handles auto-inviting functionality for TurtleWoW
 
 SurpriseMe = {}
-SurpriseMe.version = "1.0"
+SurpriseMe.version = "1.1"
+SurpriseMe.pendingInvite = nil
+SurpriseMe.pendingElapsed = 0
 
 -- Default configuration
 local defaults = {
@@ -43,13 +45,15 @@ function SurpriseMe:OnEvent(event)
         SurpriseMe:Print("Surprise Me! addon loaded! Type /surpriseme to open settings.")
         
     elseif event == "CHAT_MSG_WHISPER" then
-        if SurpriseMeDB.enabled then
+        if SurpriseMeDB and SurpriseMeDB.enabled then
             SurpriseMe:HandleWhisper(arg1, arg2)
         end
         
-    elseif event == "PARTY_MEMBERS_CHANGED" then
-        -- Check if we need to convert to raid
-        SurpriseMe:CheckRaidConversion()
+    elseif event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
+        -- Roster events fire on login, dungeon-finder group formation, and
+        -- when finder promotes you to leader. Never auto-convert here.
+        -- Only complete a pending invite after we converted for a 6th player.
+        SurpriseMe:TrySendPendingInvite()
     end
 end
 
@@ -71,6 +75,132 @@ function SurpriseMe:HandleWhisper(message, sender)
     
     if shouldInvite then
         SurpriseMe:InvitePlayer(sender)
+    end
+end
+
+-- True when dungeon finder / LFG queue or an LFG party is active.
+-- Covers vanilla meeting stones plus LFG APIs some 1.12 servers backport.
+function SurpriseMe:IsDungeonFinderActive()
+    if IsInMeetingStoneQueue then
+        local ok, queued = pcall(IsInMeetingStoneQueue)
+        if ok and queued then
+            return true
+        end
+    end
+
+    if GetLFGMode then
+        local ok, mode = pcall(GetLFGMode)
+        if ok and mode and mode ~= "" then
+            return true
+        end
+    end
+
+    if HasLFGRestrictions then
+        local ok, restricted = pcall(HasLFGRestrictions)
+        if ok and restricted then
+            return true
+        end
+    end
+
+    if IsPartyLFG then
+        local ok, isLfg = pcall(IsPartyLFG)
+        if ok and isLfg then
+            return true
+        end
+    end
+
+    if GetLFGQueueStats then
+        local ok, hasData = pcall(GetLFGQueueStats)
+        if ok and hasData then
+            return true
+        end
+    end
+
+    -- TurtleWoW Looking For Turtles addon
+    if type(LFT) == "table" then
+        if LFT.queued or LFT.inQueue or LFT.isQueued then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- Convert only when inviting a 6th player into a full 5-man party.
+-- GetNumPartyMembers() excludes the player, so 4 means a full party of 5.
+function SurpriseMe:ShouldConvertToRaidForInvite()
+    if not SurpriseMeDB or not SurpriseMeDB.enabled then
+        return false
+    end
+    if GetNumRaidMembers() > 0 then
+        return false
+    end
+    if GetNumPartyMembers() < 4 then
+        return false
+    end
+    if not IsPartyLeader() then
+        return false
+    end
+    if SurpriseMe:IsDungeonFinderActive() then
+        return false
+    end
+    return true
+end
+
+function SurpriseMe:SendInvite(playerName)
+    -- Send the invite (1.12 uses InviteByName instead of InviteUnit)
+    InviteByName(playerName)
+
+    if SurpriseMeDB.whisperResponse and SurpriseMeDB.responseMessage then
+        SendChatMessage(SurpriseMeDB.responseMessage, "WHISPER", nil, playerName)
+    end
+
+    SurpriseMe:Print("Invited " .. playerName .. " to the group!")
+end
+
+function SurpriseMe:TrySendPendingInvite()
+    if not SurpriseMe.pendingInvite then
+        return true
+    end
+    if GetNumRaidMembers() > 0 then
+        local playerName = SurpriseMe.pendingInvite
+        SurpriseMe.pendingInvite = nil
+        SurpriseMe:StopPendingInviteTimer()
+        SurpriseMe:SendInvite(playerName)
+        return true
+    end
+    return false
+end
+
+function SurpriseMe:StopPendingInviteTimer()
+    SurpriseMe.pendingElapsed = 0
+    if SurpriseMe.eventFrame then
+        SurpriseMe.eventFrame:SetScript("OnUpdate", nil)
+    end
+end
+
+function SurpriseMe:StartPendingInviteTimer()
+    SurpriseMe.pendingElapsed = 0
+    if SurpriseMe.eventFrame then
+        SurpriseMe.eventFrame:SetScript("OnUpdate", function()
+            SurpriseMe:OnUpdate(arg1)
+        end)
+    end
+end
+
+function SurpriseMe:OnUpdate(elapsed)
+    SurpriseMe.pendingElapsed = (SurpriseMe.pendingElapsed or 0) + (elapsed or 0)
+    if SurpriseMe:TrySendPendingInvite() then
+        return
+    end
+    -- ConvertToRaid can apply on a later frame; retry briefly, then invite anyway.
+    if SurpriseMe.pendingElapsed > 2 then
+        local playerName = SurpriseMe.pendingInvite
+        SurpriseMe.pendingInvite = nil
+        SurpriseMe:StopPendingInviteTimer()
+        if playerName then
+            SurpriseMe:SendInvite(playerName)
+        end
     end
 end
 
@@ -113,7 +243,6 @@ function SurpriseMe:InvitePlayer(playerName)
         return
     end
     
-    -- Check if we're in a full party and need to convert to raid
     local partySize = GetNumPartyMembers()
     local raidSize = GetNumRaidMembers()
     
@@ -121,37 +250,33 @@ function SurpriseMe:InvitePlayer(playerName)
         SurpriseMe:Print("Party size: " .. partySize .. ", Raid size: " .. raidSize)
     end
     
-    -- If we're in a party of 5 (including leader), convert to raid
-    if partySize >= 4 and raidSize == 0 then
-        ConvertToRaid()
+    -- Full 5-man party: convert only to make room for this 6th invite.
+    if SurpriseMe:ShouldConvertToRaidForInvite() then
         if SurpriseMeDB.debugMode then
-            SurpriseMe:Print("Converting party to raid...")
+            SurpriseMe:Print("Converting party to raid to invite a 6th player...")
         end
-    end
-    
-    -- Send the invite (1.12 uses InviteByName instead of InviteUnit)
-    InviteByName(playerName)
-    
-    -- Send whisper response if enabled
-    if SurpriseMeDB.whisperResponse and SurpriseMeDB.responseMessage then
-        SendChatMessage(SurpriseMeDB.responseMessage, "WHISPER", nil, playerName)
-    end
-    
-    SurpriseMe:Print("Invited " .. playerName .. " to the group!")
-end
 
--- Check if we need to convert party to raid
-function SurpriseMe:CheckRaidConversion()
-    local partySize = GetNumPartyMembers()
-    local raidSize = GetNumRaidMembers()
-    
-    -- If we have 5+ people and we're still in party mode, convert to raid
-    if partySize >= 4 and raidSize == 0 then
+        SurpriseMe.pendingInvite = playerName
         ConvertToRaid()
-        if SurpriseMeDB.debugMode then
-            SurpriseMe:Print("Auto-converting to raid due to party size")
+        if not SurpriseMe:TrySendPendingInvite() then
+            SurpriseMe:StartPendingInviteTimer()
         end
+        return
     end
+
+    -- Full party but conversion is not allowed (dungeon finder, not leader, etc.)
+    if partySize >= 4 and raidSize == 0 then
+        if SurpriseMe:IsDungeonFinderActive() then
+            SurpriseMe:Print("Cannot invite " .. playerName .. " while Dungeon Finder is active (party is full).")
+        elseif not IsPartyLeader() then
+            SurpriseMe:Print("Cannot convert to raid to invite " .. playerName .. " (you are not the party leader).")
+        else
+            SurpriseMe:Print("Cannot invite " .. playerName .. " - party is full.")
+        end
+        return
+    end
+
+    SurpriseMe:SendInvite(playerName)
 end
 
 -- Add a keyword
@@ -276,7 +401,9 @@ end
 
 -- Create the main frame
 local frame = CreateFrame("Frame", "SurpriseMeFrame")
+SurpriseMe.eventFrame = frame
 frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("CHAT_MSG_WHISPER") 
+frame:RegisterEvent("CHAT_MSG_WHISPER")
 frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+frame:RegisterEvent("RAID_ROSTER_UPDATE")
 frame:SetScript("OnEvent", function() SurpriseMe:OnEvent(event) end)

@@ -1,6 +1,6 @@
 # Surprise Me! - Auto-Invite Addon for TurtleWoW
 
-[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/yourusername/SurpriseMe)
+[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](https://github.com/yourusername/SurpriseMe)
 [![WoW Version](https://img.shields.io/badge/WoW-1.12-orange.svg)](https://turtle-wow.org/)
 
 **Surprise Me!** is a World of Warcraft 1.12 addon designed for TurtleWoW that automatically invites players to your group when they whisper specific keywords. Perfect for raid leaders, dungeon groups, or anyone who frequently forms groups!
@@ -10,7 +10,7 @@
 - **Automatic Invitations**: Instantly invite players who whisper configurable keywords
 - **Keyword Management**: Add, remove, and customize trigger words
 - **Whisper Responses**: Optionally send automatic responses when inviting players
-- **Smart Group Management**: Automatically converts parties to raids when needed (at 5+ players)
+- **Smart Group Management**: Converts a party to a raid only when inviting a 6th player (a full 5-man dungeon group stays a party)
 - **User-Friendly GUI**: Easy-to-use configuration interface
 - **Slash Commands**: Full command-line interface for power users
 - **Duplicate Prevention**: Won't invite players already in your group
@@ -73,7 +73,7 @@ The addon comes pre-configured with these keywords:
 ## 🛡️ Smart Features
 
 ### Automatic Raid Conversion
-When your party reaches 5 players, the addon automatically converts it to a raid group to accommodate more members.
+A 5-player party is left as a party (so Dungeon Finder groups keep working). The addon converts to a raid only when you invite a 6th player via a keyword whisper, and only if you are the party leader and Dungeon Finder / meeting-stone queue is not active.
 
 ### Duplicate Protection
 The addon checks if a player is already in your group before sending an invitation, preventing spam and errors.
