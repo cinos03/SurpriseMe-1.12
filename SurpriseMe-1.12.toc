@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: Surprise Me! 1.12
 ## Notes: Automatically invites players who whisper keywords. Perfect for raid invites!
-## Author: YourName
+## Author: Cinos
 ## Version: 1.1
 ## SavedVariables: SurpriseMeDB
 
